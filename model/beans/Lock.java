@@ -1,4 +1,4 @@
-package model;
+package model.beans;
 
 public enum Lock {
 	SHARED, EXCLUSIVE

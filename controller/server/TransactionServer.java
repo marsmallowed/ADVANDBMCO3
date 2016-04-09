@@ -10,40 +10,61 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 
-import model.Node;
-import model.Transaction;
+import javax.sql.rowset.CachedRowSet;
 
-public class Server extends Thread {
-	private Transaction clientTransaction;
+import com.sun.rowset.CachedRowSetImpl;
+
+import controller.db.Controller;
+import model.beans.SelfNode;
+import model.beans.Transaction;
+
+public class TransactionServer extends Thread {
+	private SelfNode self;
+	
+	public TransactionServer(SelfNode self) {
+		this.self = self;
+	}
 	
 	public void run() {
 		try {
-			ServerSocket welcomeSocket = new ServerSocket(1234);
+			ServerSocket welcomeSocket = new ServerSocket(4);
 			while (true) {
 				Socket connectionSocket = welcomeSocket.accept();
-//				BufferedReader fromClient =
-//						new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-				
+
 				// read and store the transaction object from client
 				ObjectInputStream inFromClient =
 						new ObjectInputStream(connectionSocket.getInputStream());
 				// TODO: add checker if transaction granted (consider current locks)
-				// TODO: add real time for lockout
+				// TODO: add real time for lock timeout
 				Transaction t = (Transaction) inFromClient.readObject();
 
-				// TODO: call the connection or execution of query and put 
-				ResultSet rs = null;
+				// TODO: call the connection or execution of query and put RS
+				ArrayList<ResultSet> rs = self.transactLocal(t);
+				CachedRowSet crs;
+				
+				ArrayList<CachedRowSet> crsList = new ArrayList<CachedRowSet>();
+				
+				for (ResultSet a : rs) {
+					try {
+						crs = new CachedRowSetImpl();
+						crs.populate(a);
+						crsList.add(crs);
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+				}
+				
 				// return result set to client
 				ObjectOutputStream outToClient =
 						new ObjectOutputStream(connectionSocket.getOutputStream());
-				outToClient.writeObject(rs);
+				outToClient.writeObject(crsList);
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

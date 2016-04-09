@@ -1,14 +1,13 @@
-package controller;
+package controller.db;
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
+import java.sql.Time;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 
 public class Connector {
 
@@ -50,38 +49,58 @@ public class Connector {
     	}
     }
     
-    public ResultSet executeQuery(String query, ArrayList<String> st)
+    public ResultSet executeQuery(String query)
     {
-//        try {
-//            Statement st = conn.createStatement();
-//            result = st.executeQuery(query);
-//
-//        } catch (SQLException ex) {
-//            Logger.getLogger(Connector.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-//        return result;
-//    }
-    	ResultSet rs = null;
-    	Connection conn = this.getConnection();
-    try
-	{
-		PreparedStatement statement;
-		
-		statement = conn.prepareStatement(query);
-		if(!st.isEmpty() && !st.get(0).matches(""))
-		{
-			for(int a = 0; a < st.size(); a++)
-			{
-				statement.setString(a+1, st.get(a));
-			}
-		}
-		rs = statement.executeQuery();
-	}
-	catch (SQLException e)
-	{
-		Logger.getLogger(Connector.class.getName()).log(Level.SEVERE, null, e);
-	}
+            ResultSet result = null;
+            Connection conn = this.getConnection();
+        try {
+            Statement st = conn.createStatement();
+            result = st.executeQuery(query);
+
+        } catch (SQLException ex) {
+            Logger.getLogger(Connector.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return result;
+    }
     
-    return rs;
+    public ResultSet callSP(String statement)
+    {
+    	Connection conn = this.getConnection();
+    	ResultSet rs = null;
+	    	
+	    	// call SP
+	    	if(statement.contains("{")) {
+	    		CallableStatement callableStatement = null;
+		        try {
+		        	callableStatement = conn.prepareCall(statement);
+		        	rs = callableStatement.executeQuery();
+		        	
+		        	conn.close();
+		        } catch (SQLException e) {
+		            e.printStackTrace();
+		            System.out.println("DB error");
+		        }
+	    	}
+	    	
+	    return rs;
+	    	
+    }
+
+    public void executeSP(String statement){
+    	
+    	Connection conn = this.getConnection();
+    	
+    	// create SP
+    	if(!statement.contains("{")){
+	        Statement stmt = null;
+	        try {
+	        	stmt = conn.createStatement();
+	        	stmt.execute(statement);
+		    	conn.close();
+		    }
+	        catch(SQLException e) {
+	        	System.err.println("SQLException: " + e.getMessage());
+		    }
+    	}
     }
 }

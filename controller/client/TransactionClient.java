@@ -3,14 +3,19 @@ package controller.client;
 import java.io.*;
 import java.net.*;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 
-import model.Transaction;
+import javax.sql.rowset.CachedRowSet;
 
-public class Client extends Thread {
+import model.beans.Transaction;
+
+public class TransactionClient extends Thread {
 	private Transaction t;
 	private String serverIP;
+	private ArrayList<ResultSet> rs;
 	
-	public Client(Transaction t, String serverIP) {
+	public TransactionClient(Transaction t, String serverIP) {
 		this.t = t;
 		this.serverIP = serverIP;
 	}
@@ -18,7 +23,7 @@ public class Client extends Thread {
     public void run() {
         Socket clientSocket;
 		try {
-			clientSocket = new Socket(serverIP, 1234);
+			clientSocket = new Socket(serverIP, 4);
 			ObjectOutputStream outToServer = new ObjectOutputStream(clientSocket.getOutputStream());
 	        // pass transaction to server
 	        outToServer.writeObject(t);
@@ -27,14 +32,26 @@ public class Client extends Thread {
 	            new ObjectInputStream(clientSocket.getInputStream());
 	        
 	        // get result set from server
-	        ResultSet rs = (ResultSet) inFromServer.readObject();
+	        ArrayList<CachedRowSet> crsList = (ArrayList<CachedRowSet>) inFromServer.readObject();
+	        rs = new ArrayList<ResultSet>();
+	        ResultSet a;
+	        for (CachedRowSet crs : crsList) {
+	        	try {
+					rs.add(crs.getOriginal());
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+	        }
+	        
 	        clientSocket.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+    }
+    
+    public ResultSet getResultSet(int i) {
+    	return rs.get(i);
     }
 }
